@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kuva-arvostelut</title>
+  <title>Kuva-arvostelut Heiskanen & Muut</title>
   <style>
     body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 1rem; }
     .image-block { border: 1px solid #ccc; padding: 1rem; margin-bottom: 2rem; }
@@ -92,24 +92,31 @@
       });
     }
 
-    async function vote(imageId, rating) {
-      const userId = currentUser.id;
-      const { error } = await supabase
-        .from('ratings')
-        .insert([{ image_id: imageId, rating, user_id: userId }]);
+   async function vote(imageId, rating) {
+  const userId = currentUser?.id;
 
-      if (error) {
-        if (error.message.includes("duplicate key")) {
-          alert("Olet jo äänestänyt tätä kuvaa.");
-        } else {
-          alert("Virhe äänestyksessä.");
-          console.error(error);
-        }
-      } else {
-        alert("Äänestys tallennettu!");
-        await updateAverage(imageId);
-      }
-    }
+  if (!userId) {
+    console.error("Virhe: käyttäjää ei ole kirjattu sisään.");
+    alert("Käyttäjätunnistusta ei ole vielä valmis. Yritä hetken päästä uudelleen.");
+    return;
+  }
+
+  console.log("Äänestetään:", { imageId, rating, userId });
+
+  const { data, error } = await supabase
+    .from('ratings')
+    .insert([{ image_id: imageId, rating, user_id: userId }]);
+
+  if (error) {
+    console.error("Äänestyksen virhe:", error);
+    alert("Äänestys epäonnistui: " + error.message);
+  } else {
+    console.log("Äänestys onnistui, data:", data);
+    alert("Äänestys tallennettu!");
+    await updateAverage(imageId);
+  }
+}
+
 
     async function updateAverage(imageId) {
       const { data, error } = await supabase
