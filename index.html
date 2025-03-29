@@ -15,31 +15,7 @@
 </head>
 <body>
   <h1>Kuva-arvostelut</h1>
-
-  <div id="image-container">
-    <div class="image-block" data-image-id="Kuvayksi">
-      <img src="Kuvayksi.png" alt="Kuva 1" style="max-width: 100%;">
-      <div class="rating">
-        <label>Arvostele: </label>
-        <select class="rating-select">
-          <option value="">Valitse</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
-        <button class="rate-button">Äänestä</button>
-        <p>Keskiarvo: <span class="average-rating">-</span></p>
-      </div>
-      <div class="comment-section">
-        <label>Kommentoi:</label>
-        <textarea class="comment-input"></textarea>
-        <button class="comment-button">Lähetä kommentti</button>
-        <ul class="comment-list"></ul>
-      </div>
-    </div>
-  </div>
+  <div id="image-container"></div>
 
   <script>
     const { createClient } = supabase;
@@ -50,6 +26,16 @@
 
     let currentUser;
 
+    const imageList = [
+      "Kuvayksi.png",
+      "Kuvakaksi.png",
+      "Kuvakolme.png",
+      "Kuvaneljä.png",
+      "Kuvaviisi.png",
+      "Kuvakuusi.png",
+      "Kuvaseitsemän.png"
+    ];
+
     async function signIn() {
       const { data, error } = await supabaseClient.auth.signInAnonymously();
       if (error) {
@@ -57,11 +43,48 @@
       } else {
         currentUser = data.user;
         console.log("Kirjauduttu anonyymisti:", currentUser.id);
-        initializePage();
+        renderImages();
       }
     }
 
-    signIn();
+    function renderImages() {
+      const container = document.getElementById('image-container');
+      container.innerHTML = '';
+
+      imageList.forEach(filename => {
+        const imageId = filename.split('.')[0];
+        const block = document.createElement('div');
+        block.className = 'image-block';
+        block.setAttribute('data-image-id', imageId);
+
+        block.innerHTML = `
+          <img src="${filename}" alt="${imageId}" style="max-width: 100%;">
+          <div class="rating">
+            <label>Arvostele: </label>
+            <select class="rating-select">
+              <option value="">Valitse</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+            <button class="rate-button">Äänestä</button>
+            <p>Keskiarvo: <span class="average-rating">-</span></p>
+          </div>
+          <div class="comment-section">
+            <label>Kommentoi:</label>
+            <textarea class="comment-input"></textarea>
+            <button class="comment-button">Lähetä kommentti</button>
+            <ul class="comment-list"></ul>
+          </div>
+        `;
+
+        container.appendChild(block);
+      });
+
+      initializePage();
+    }
 
     function initializePage() {
       document.querySelectorAll('.rate-button').forEach(button => {
@@ -158,6 +181,8 @@
         list.appendChild(li);
       });
     }
+
+    signIn();
   </script>
 </body>
 </html>
