@@ -42,7 +42,8 @@
   </div>
 
   <script>
-    const supabase = supabase.createClient(
+    const { createClient } = supabase;
+    const supabaseClient = createClient(
       'https://odveeqqhhmnqlwkylsvu.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kdmVlcXFoaG1ucWx3a3lsc3Z1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMyNjMxNzYsImV4cCI6MjA1ODgzOTE3Nn0.s9_fIlYTJ27rPYWdqbRlqThCfIqwMGDnt1j_ehXN-fM'
     );
@@ -50,7 +51,7 @@
     let currentUser;
 
     async function signIn() {
-      const { data, error } = await supabase.auth.signInAnonymously();
+      const { data, error } = await supabaseClient.auth.signInAnonymously();
       if (error) {
         console.error('Kirjautuminen epäonnistui', error);
       } else {
@@ -92,34 +93,33 @@
       });
     }
 
-   async function vote(imageId, rating) {
-  const userId = currentUser?.id;
+    async function vote(imageId, rating) {
+      const userId = currentUser?.id;
 
-  if (!userId) {
-    console.error("Virhe: käyttäjää ei ole kirjattu sisään.");
-    alert("Käyttäjätunnistusta ei ole vielä valmis. Yritä hetken päästä uudelleen.");
-    return;
-  }
+      if (!userId) {
+        console.error("Virhe: käyttäjää ei ole kirjattu sisään.");
+        alert("Käyttäjätunnistusta ei ole vielä valmis. Yritä hetken päästä uudelleen.");
+        return;
+      }
 
-  console.log("Äänestetään:", { imageId, rating, userId });
+      console.log("Äänestetään:", { imageId, rating, userId });
 
-  const { data, error } = await supabase
-    .from('ratings')
-    .insert([{ image_id: imageId, rating, user_id: userId }]);
+      const { data, error } = await supabaseClient
+        .from('ratings')
+        .insert([{ image_id: imageId, rating, user_id: userId }]);
 
-  if (error) {
-    console.error("Äänestyksen virhe:", error);
-    alert("Äänestys epäonnistui: " + error.message);
-  } else {
-    console.log("Äänestys onnistui, data:", data);
-    alert("Äänestys tallennettu!");
-    await updateAverage(imageId);
-  }
-}
-
+      if (error) {
+        console.error("Äänestyksen virhe:", error);
+        alert("Äänestys epäonnistui: " + error.message);
+      } else {
+        console.log("Äänestys onnistui, data:", data);
+        alert("Äänestys tallennettu!");
+        await updateAverage(imageId);
+      }
+    }
 
     async function updateAverage(imageId) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('ratings')
         .select('rating')
         .eq('image_id', imageId);
@@ -132,7 +132,7 @@
 
     async function submitComment(imageId, comment) {
       const userId = currentUser.id;
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('comments')
         .insert([{ image_id: imageId, comment, user_id: userId }]);
 
@@ -144,7 +144,7 @@
     }
 
     async function loadComments(imageId) {
-      const { data } = await supabase
+      const { data } = await supabaseClient
         .from('comments')
         .select('comment, created_at')
         .eq('image_id', imageId)
