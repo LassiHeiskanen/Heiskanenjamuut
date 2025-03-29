@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kuva-arvostelut</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 1rem; }
+    .image-block { border: 1px solid #ccc; padding: 1rem; margin-bottom: 2rem; }
+    .rating { margin: 0.5rem 0; }
+    .comment-section { margin-top: 1rem; }
+    textarea { width: 100%; height: 60px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+<body>
+  <h1>Kuva-arvostelut</h1>
+
+  <div id="image-container">
+    <div class="image-block" data-image-id="kuva1">
+      <img src="kuvat/kuva1.png" alt="Kuva 1" style="max-width: 100%;">
+      <div class="rating">
+        <label>Arvostele: </label>
+        <select class="rating-select">
+          <option value="">Valitse</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <button class="rate-button">Äänestä</button>
+        <p>Keskiarvo: <span class="average-rating">-</span></p>
+      </div>
+      <div class="comment-section">
+        <label>Kommentoi:</label>
+        <textarea class="comment-input"></textarea>
+        <button class="comment-button">Lähetä kommentti</button>
+        <ul class="comment-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const supabase = supabase.createClient(
+      'https://odveeqqhhmnqlwkylsvu.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kdmVlcXFoaG1ucWx3a3lsc3Z1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMyNjMxNzYsImV4cCI6MjA1ODgzOTE3Nn0.s9_fIlYTJ27rPYWdqbRlqThCfIqwMGDnt1j_ehXN-fM'
+    );
+
+    let currentUser;
+
+    async function signIn() {
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (error) {
+        console.error('Kirjautuminen epäonnistui', error);
+      } else {
+        currentUser = data.user;
+        console.log("Kirjauduttu anonyymisti:", currentUser.id);
+        initializePage();
+      }
+    }
+
+    signIn();
+
+    function initializePage() {
+      document.querySelectorAll('.rate-button').forEach(button => {
+        button.addEventListener('click', function () {
+          const block = this.closest('.image-block');
+          const imageId = block.getAttribute('data-image-id');
+          const ratingValue = block.querySelector('.rating-select').value;
+          if (!ratingValue) return alert('Valitse arvosana ensin');
+          vote(imageId, parseInt(ratingValue));
+        });
+      });
+
+      document.querySelectorAll('.comment-button').forEach(button => {
+        button.addEventListener('click', function () {
+          const block = this.closest('.image-block');
+          const imageId = block.getAttribute('data-image-id');
+          const input = block.querySelector('.comment-input');
+          const comment = input.value.trim();
+          if (!comment) return;
+          submitComment(imageId, comment);
+          input.value = '';
+        });
+      });
+
+      document.querySelectorAll('.image-block').forEach(block => {
+        const imageId = block.getAttribute('data-image-id');
+        updateAverage(imageId);
+        loadComments(imageId);
+      });
+    }
+
+    async function vote(imageId, rating) {
+      const userId = currentUser.id;
+      const { error } = await supabase
+        .from('ratings')
+        .insert([{ image_id: imageId, rating, user_id: userId }]);
+
+      if (error) {
+        if (error.message.includes("duplicate key")) {
+          alert("Olet jo äänestänyt tätä kuvaa.");
+        } else {
+          alert("Virhe äänestyksessä.");
+          console.error(error);
+        }
+      } else {
+        alert("Äänestys tallennettu!");
+        await updateAverage(imageId);
+      }
+    }
+
+    async function updateAverage(imageId) {
+      const { data, error } = await supabase
+        .from('ratings')
+        .select('rating')
+        .eq('image_id', imageId);
+
+      if (data && data.length > 0) {
+        const avg = (data.reduce((sum, r) => sum + r.rating, 0) / data.length).toFixed(2);
+        document.querySelector(`[data-image-id='${imageId}'] .average-rating`).textContent = avg;
+      }
+    }
+
+    async function submitComment(imageId, comment) {
+      const userId = currentUser.id;
+      const { error } = await supabase
+        .from('comments')
+        .insert([{ image_id: imageId, comment, user_id: userId }]);
+
+      if (!error) {
+        loadComments(imageId);
+      } else {
+        console.error("Kommentin tallennus epäonnistui", error);
+      }
+    }
+
+    async function loadComments(imageId) {
+      const { data } = await supabase
+        .from('comments')
+        .select('comment, created_at')
+        .eq('image_id', imageId)
+        .order('created_at', { ascending: true });
+
+      const list = document.querySelector(`[data-image-id='${imageId}'] .comment-list`);
+      list.innerHTML = '';
+      data.forEach(c => {
+        const li = document.createElement('li');
+        li.textContent = c.comment;
+        list.appendChild(li);
+      });
+    }
+  </script>
+</body>
+</html>
